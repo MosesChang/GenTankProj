@@ -2,9 +2,30 @@
 /** Imports */
 import State from './state';
 
+enum TileType {
+  Floor = 0,
+  Hay,
+  Wall
+}
+
+class Tile {
+  // sprite: Phaser.Sprite ;
+  type: TileType ;
+
+  constructor(id: TileType) {
+    this.type = id ;
+  }
+
+  public setTileType(id: TileType) {
+    this.type = id ;
+  }
+}
+
 // The main state of the game
 export default class MainState extends State {
   sky: Phaser.Sprite; // Reference to background sprite
+
+  tiles : Tile[][] ;
 
   platforms: Phaser.Group; // Reference to the group of platform's sprites
 
@@ -14,39 +35,48 @@ export default class MainState extends State {
     // `arcade` model.
     this.game.physics.startSystem(Phaser.Physics.ARCADE);
 
-
     // Add a simple background
     this.sky = this.game.add.sprite(0, 0, 'sky');
-
-    this.game.add.sprite(100, 100, 'tank');
-    this.game.add.sprite(200, 100, 'tile');
-
     // Also we create a group for platforms
     this.platforms = this.game.add.group();
-
     // and enable physics for any object that is created in this group
     this.platforms.enableBody = true;
-
-
     // Create the ground
     const ground = this.platforms.create(
       0,
       this.game.world.height - 64,
       'platform'
     );
-
     // and scale it to fit the width of the game (the original sprite
     // size - 400x32, width of the game - 800)
     ground.scale.setTo(2, 2);
-
     // And make it immovable (Otherwise it will fall when we jump on it).
     ground.body.immovable = true;
-
     // Also add two ledges
     const ledge1 = this.platforms.create(400, 400, 'platform');
     ledge1.body.immovable = true;
-
     const ledge2 = this.platforms.create(-150, 250, 'platform');
     ledge2.body.immovable = true;
+
+    this.tiles = [] ;
+    this.makeTile(0, 0, TileType.Floor) ;
+    this.makeTile(2, 7, TileType.Wall) ;
+    this.makeTile(-2, -10, TileType.Hay) ;
+    console.log(this.tiles[-2][-10].type) ;
+    this.makeTile(-2, -10, TileType.Floor) ;
+    console.log(this.tiles[-2][-10].type) ;
+
   }
+
+  private makeTile(inX: number, inY: number, id: TileType) {
+    if ( !this.tiles[inX] ) {
+      this.tiles[inX] = [] ;
+    }
+    if ( !this.tiles[inX][inY] ) {
+      this.tiles[inX][inY] = new Tile(id) ;
+    } else {
+      this.tiles[inX][inY].setTileType(id) ;
+    }
+  }
+
 }
