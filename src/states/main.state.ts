@@ -18,6 +18,8 @@ export default class MainState extends State {
     // Add a simple background
     this.sky = this.game.add.sprite(0, 0, 'sky');
 
+    this.game.add.sprite(100, 100, 'tank');
+    this.game.add.sprite(200, 100, 'tile');
 
     // Also we create a group for platforms
     this.platforms = this.game.add.group();
