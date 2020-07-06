@@ -6,7 +6,11 @@
 			"script": "start",
 			"problemMatcher": [],
 			"label": "npm: start",
-			"detail": "webpack-dev-server"
+			"detail": "webpack-dev-server",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
 		}
 	]
 }

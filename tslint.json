@@ -59,10 +59,6 @@
     "triple-equals": true,
     "use-isnan": true,
     "eofline": true,
-    "linebreak-style": [
-      true,
-      "LF"
-    ],
     "no-trailing-whitespace": true,
     "arrow-parens": true,
     "comment-format": [
