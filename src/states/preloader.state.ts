@@ -10,6 +10,7 @@ const dudeImage       = require('assets/images/dude.png');
 
 const tileImage       = require('assets/images/tile.png');
 const tankImage       = require('assets/images/tank.png');
+const bulletImage     = require('assets/images/bullet.png');
 
 // The state for loading core resources for the game
 export default class PreloaderState extends State {
@@ -23,6 +24,7 @@ export default class PreloaderState extends State {
 
     this.game.load.spritesheet('tileImage', tileImage, 32, 32);
     this.game.load.image('tankImage', tankImage);
+    this.game.load.image('bulletImage', bulletImage);
   }
 
   create(): void {

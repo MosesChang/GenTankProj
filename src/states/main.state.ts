@@ -9,9 +9,9 @@ enum TileType {
 }
 
 class Tile {
+  public type: TileType ;
   private sprite: Phaser.Sprite ;
   private game: Phaser.Game ;
-  private type: TileType ;
 
   constructor(game: Phaser.Game, id: TileType, sprite : Phaser.Sprite) {
     this.game = game ;
@@ -41,6 +41,23 @@ class Tile {
     }
   }
 
+  public ckeckCollision(pos: Phaser.Point) {
+    let width = pos.x - this.sprite.position.x ;
+    let height = pos.y - this.sprite.position.y ;
+    if (Math.sqrt((width * width) + (height * height)) <= 20) {
+      return true ;
+    } else {
+      return false ;
+    }
+  }
+
+  public hitBullet(point: number) {
+    if (this.type === TileType.Hay) {   // Temp without point
+      this.type = TileType.Floor ;
+      this.sprite.frame = TileType.Floor ;
+    }
+  }
+
   public get visible(): boolean {
     return this.sprite.visible ;
   }
@@ -51,11 +68,18 @@ export default class MainState extends State {
   tiles : Tile[][] ;
   allTileIndex : Phaser.Point[] ;
   tankSprite: Phaser.Sprite ;
+  bulletSprite: Phaser.Sprite ;
+  bulletVelocity: Phaser.Point ;
   tileGroup : Phaser.Group ;
   cursors: Phaser.CursorKeys ;
 
+  leftBoundry : number;
+  rightBoundry : number;
+  topBoundry : number;
+  bottomBoundry : number;
+
   TILE_WIDTH: number = 32 ;
-  VISIBLE_TILE_RADIUS: number = 5 ;
+  VISIBLE_TILE_RADIUS: number = 15 ;    // test will be 5
 
   create(): void {
     // Init
@@ -75,8 +99,25 @@ export default class MainState extends State {
     this.tankSprite.body.damping = 0.95 ;
     this.game.camera.follow(this.tankSprite, Phaser.Camera.FOLLOW_LOCKON, 0.1, 0.1);
 
+    // Bullet
+    this.bulletSprite = this.game.add.sprite(0, 0, 'bulletImage');
+    this.bulletSprite.anchor.setTo(0.5, 0.5) ;
+    this.bulletSprite.visible = false ;
+    this.bulletVelocity = new Phaser.Point(0, 0) ;
+
     // Tile init
     this.tileAssign() ;
+
+    // Bullet
+    this.game.input.keyboard.addKey(Phaser.KeyCode.ONE).onDown.add(() => {
+      if (!this.bulletSprite.visible) {
+        const lootAt = new Phaser.Point( Math.cos(Phaser.Math.degToRad(this.tankSprite.body.angle - 90)), Math.sin(Phaser.Math.degToRad(this.tankSprite.body.angle - 90))) ;
+        this.bulletSprite.visible = true ;
+        this.bulletSprite.position.setTo(this.tankSprite.position.x + (lootAt.x * 18), this.tankSprite.position.y + (lootAt.y * 18)) ;
+        this.bulletVelocity.x = lootAt.x * 300 ;
+        this.bulletVelocity.y = lootAt.y * 300 ;
+      }
+    });
 
     // Cursor
     this.cursors = this.game.input.keyboard.createCursorKeys();
@@ -101,6 +142,42 @@ export default class MainState extends State {
       move = true ;
     }
 
+    // Bullet
+    if (this.bulletSprite.visible) {
+      this.bulletSprite.position.setTo(this.bulletSprite.position.x + (this.bulletVelocity.x * this.game.time.elapsed / 1000),
+        this.bulletSprite.position.y + (this.bulletVelocity.y * this.game.time.elapsed / 1000)) ;
+      let pos = this.bulletSprite.position ;
+
+      if (pos.x >= this.rightBoundry * this.TILE_WIDTH || pos.x <= this.leftBoundry * this.TILE_WIDTH ||
+        pos.y >= this.bottomBoundry * this.TILE_WIDTH || pos.y <= this.topBoundry * this.TILE_WIDTH) {
+        this.bulletSprite.visible = false ;
+      } else {
+        let xless = (this.bulletSprite.position.x / this.TILE_WIDTH | 0) - 2  ;
+        let xMore = (this.bulletSprite.position.x / this.TILE_WIDTH | 0) + 2  ;
+        let yless = (this.bulletSprite.position.y / this.TILE_WIDTH | 0) - 2  ;
+        let yMore = (this.bulletSprite.position.y / this.TILE_WIDTH | 0) + 2  ;
+        for (let iX = xless ; iX <= xMore ; iX++) {
+          for (let iY = yless ; iY <= yMore ; iY++) {
+            if (iX < this.leftBoundry || iX > this.rightBoundry || iY < this.topBoundry || iY > this.bottomBoundry) {
+              continue ;
+            }
+            if (this.tiles[iX][iY].type !== TileType.Floor) {
+              if (this.tiles[iX][iY].ckeckCollision(this.bulletSprite.position)) {
+                this.bulletSprite.visible = false ;
+                if (this.tiles[iX][iY].type === TileType.Hay) {
+                  this.tiles[iX][iY].hitBullet(100) ;
+                }
+                break ;
+              }
+            }
+          }
+          if (this.bulletSprite.visible === false) {
+            break ;
+          }
+        }
+      }
+    }
+
     // Tile assign (create, show & hide)
     if (move) {
       this.tileAssign() ;
@@ -110,14 +187,14 @@ export default class MainState extends State {
   private tileAssign() {
     // Count boundry
     let totalRadius = this.TILE_WIDTH * this.VISIBLE_TILE_RADIUS ;
-    let leftBoundry = (this.tankSprite.position.x - totalRadius) / this.TILE_WIDTH | 0 ;
-    let rightBoundry = (this.tankSprite.position.x + totalRadius) / this.TILE_WIDTH | 0 ;
-    let topBoundry = (this.tankSprite.position.y - totalRadius) / this.TILE_WIDTH | 0 ;
-    let bottomBoundry = (this.tankSprite.position.y + totalRadius) / this.TILE_WIDTH | 0 ;
+    this.leftBoundry = (this.tankSprite.position.x - totalRadius) / this.TILE_WIDTH | 0 ;
+    this.rightBoundry = (this.tankSprite.position.x + totalRadius) / this.TILE_WIDTH | 0 ;
+    this.topBoundry = (this.tankSprite.position.y - totalRadius) / this.TILE_WIDTH | 0 ;
+    this.bottomBoundry = (this.tankSprite.position.y + totalRadius) / this.TILE_WIDTH | 0 ;
 
     // visible in boundry
-    for (let iX = leftBoundry ; iX <= rightBoundry ; iX ++) {
-      for (let iY = topBoundry ; iY <= bottomBoundry ; iY ++) {
+    for (let iX = this.leftBoundry ; iX <= this.rightBoundry ; iX ++) {
+      for (let iY = this.topBoundry ; iY <= this.bottomBoundry ; iY ++) {
         if (!this.checkTileExistAnyArrayIt(iX, iY)) {
           const tileSprite = this.game.add.sprite(iX * this.TILE_WIDTH, iY * this.TILE_WIDTH, 'tileImage', 0, this.tileGroup) ;
           let randID = this.game.rnd.integerInRange(0, 10) ;
@@ -138,7 +215,7 @@ export default class MainState extends State {
 
     // invisivle out of boundry
     this.allTileIndex.forEach((value: Phaser.Point, index: number, array: Phaser.Point[]) => {
-      if (value.x < leftBoundry || value.x > rightBoundry || value.y < topBoundry || value.y > bottomBoundry) {
+      if (value.x < this.leftBoundry || value.x > this.rightBoundry || value.y < this.topBoundry || value.y > this.bottomBoundry) {
         if (this.tiles[value.x][value.y].visible === true) {
           this.tiles[value.x][value.y].visible = false ;
         }
