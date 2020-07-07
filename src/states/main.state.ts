@@ -12,6 +12,7 @@ class Tile {
   private sprite: Phaser.Sprite ;
   private game: Phaser.Game ;
   private type: TileType ;
+
   constructor(game: Phaser.Game, id: TileType, sprite : Phaser.Sprite) {
     this.game = game ;
     this.sprite = sprite ;
@@ -23,10 +24,12 @@ class Tile {
       this.sprite.body.static = true ;
     }
   }
+
   public setTileType(id: TileType) {
     this.type = id ;
     this.sprite.frame = this.type ;
   }
+
   public set visible(value: boolean) {
     this.sprite.visible = value ;
     if (this.type === TileType.Wall) {
@@ -37,6 +40,7 @@ class Tile {
       }
     }
   }
+
   public get visible(): boolean {
     return this.sprite.visible ;
   }
@@ -90,7 +94,6 @@ export default class MainState extends State {
       this.tankSprite.body.moveDown(300);
       move = true ;
     }
-
     if (this.cursors.left.isDown) {
       this.tankSprite.body.velocity.x = -300;
       move = true ;
@@ -99,17 +102,21 @@ export default class MainState extends State {
       move = true ;
     }
 
+    // Tile assign (create, show & hide)
     if (move) {
       this.tileAssign() ;
     }
   }
 
   private tileAssign() {
+    // Count boundry
     let totalRadius = this.TILE_WIDTH * this.VISIBLE_TILE_RADIUS ;
     let leftBoundry = (this.tankSprite.position.x - totalRadius) / this.TILE_WIDTH | 0 ;
     let rightBoundry = (this.tankSprite.position.x + totalRadius) / this.TILE_WIDTH | 0 ;
     let topBoundry = (this.tankSprite.position.y - totalRadius) / this.TILE_WIDTH | 0 ;
     let bottomBoundry = (this.tankSprite.position.y + totalRadius) / this.TILE_WIDTH | 0 ;
+
+    // visible in boundry
     for (let iX = leftBoundry ; iX <= rightBoundry ; iX ++) {
       for (let iY = topBoundry ; iY <= bottomBoundry ; iY ++) {
         if (!this.checkTileExistAnyArrayIt(iX, iY)) {
@@ -138,7 +145,6 @@ export default class MainState extends State {
         }
       }
     }) ;
-
   }
 
   private checkTileExistAnyArrayIt(inX: number, inY: number): boolean {
