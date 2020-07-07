@@ -21,8 +21,8 @@ export default class PreloaderState extends State {
     this.game.load.image('star', starImage);
     this.game.load.spritesheet('dude', dudeImage, 32, 48);
 
-    this.game.load.image('tile', tileImage);
-    this.game.load.image('tank', tankImage);
+    this.game.load.spritesheet('tileImage', tileImage, 32, 32);
+    this.game.load.image('tankImage', tankImage);
   }
 
   create(): void {
