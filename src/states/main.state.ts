@@ -72,7 +72,7 @@ export default class MainState extends State {
     this.tankSprite.anchor.setTo(0.5, 0.5) ;
     this.game.physics.p2.enable(this.tankSprite);
     this.tankSprite.body.setCircle(15);
-    this.tankSprite.body.fixedRotation = true;      // May be not!
+    this.tankSprite.body.damping = 0.95 ;
     this.game.camera.follow(this.tankSprite, Phaser.Camera.FOLLOW_LOCKON, 0.1, 0.1);
 
     // Tile init
@@ -83,22 +83,21 @@ export default class MainState extends State {
   }
 
   public update() {
-    this.tankSprite.body.setZeroVelocity();
-
-    // input
+    // input and move
+    this.tankSprite.body.setZeroRotation();
     let move = false ;
     if (this.cursors.up.isDown) {
-      this.tankSprite.body.moveUp(300);
+      this.tankSprite.body.thrust(400) ;
       move = true ;
     } else if (this.cursors.down.isDown) {
-      this.tankSprite.body.moveDown(300);
+      this.tankSprite.body.thrust(-400) ;
       move = true ;
     }
     if (this.cursors.left.isDown) {
-      this.tankSprite.body.velocity.x = -300;
+      this.tankSprite.body.rotateLeft(100);
       move = true ;
     } else if (this.cursors.right.isDown) {
-      this.tankSprite.body.moveRight(300);
+      this.tankSprite.body.rotateRight(100);
       move = true ;
     }
 
