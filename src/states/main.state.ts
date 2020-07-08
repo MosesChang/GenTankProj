@@ -131,6 +131,8 @@ export default class MainState extends State {
     // Bullet fire
     this.game.input.keyboard.addKey(Phaser.KeyCode.ONE).onDown.add(() => {
       if (!this.bulletSprite.visible) {
+        let recoil = (this.tankSprite.frame as number + 1) * 0.7 * -this.TANK_THRUST;
+        this.tankSprite.body.thrust(recoil) ;
         const lootAt = new Phaser.Point( Math.cos(Phaser.Math.degToRad(this.tankSprite.body.angle - 90)), Math.sin(Phaser.Math.degToRad(this.tankSprite.body.angle - 90))) ;
         this.bulletSprite.visible = true ;
         this.bulletSprite.frame = this.tankSprite.frame ;
