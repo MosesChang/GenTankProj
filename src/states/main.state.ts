@@ -11,17 +11,26 @@ enum TileType {
 class Tile {
   public type: TileType ;
   private sprite: Phaser.Sprite ;
+  private effectSprite: Phaser.Sprite ;
+  private hp : number ;
   private game: Phaser.Game ;
 
-  constructor(game: Phaser.Game, id: TileType, sprite : Phaser.Sprite) {
+  private ORIGIN_HP = [Number.POSITIVE_INFINITY, 100, Number.POSITIVE_INFINITY] ;
+
+  constructor(game: Phaser.Game, id: TileType, sprite : Phaser.Sprite, effectGroup: Phaser.Group) {
     this.game = game ;
     this.sprite = sprite ;
     this.sprite.anchor.setTo(0.5, 0.5) ;
     this.setTileType(id) ;
+    this.hp = this.ORIGIN_HP[this.type] ;
     if (id === TileType.Wall) {
       this.game.physics.p2.enable(this.sprite) ;
       this.sprite.body.kinematic = true ;
       this.sprite.body.static = true ;
+    } else if (id === TileType.Hay)  {
+      this.effectSprite = this.game.add.sprite(0, 0, 'tileImage', id, effectGroup);
+      this.effectSprite.position.setTo(this.sprite.position.x, this.sprite.position.y) ;
+      this.effectSprite.anchor.setTo(0.5, 0.5) ;
     }
   }
 
@@ -51,10 +60,16 @@ class Tile {
     }
   }
 
-  public hitBullet(point: number) {
-    if (this.type === TileType.Hay) {   // Temp without point
-      this.type = TileType.Floor ;
-      this.sprite.frame = TileType.Floor ;
+  public hitBullet(damage: number) {
+    this.hp -= damage ;
+    if (this.hp <= 0) {   // Temp without point
+      this.setTileType(TileType.Floor) ;
+      this.hp = this.ORIGIN_HP[TileType.Floor] ;
+      if (this.effectSprite) {
+        this.effectSprite.visible = false ;
+      }
+    } else if (this.type === TileType.Hay) {
+      this.game.add.tween(this.effectSprite.scale).to({x: 1.5, y: 1.5}, 100, Phaser.Easing.Cubic.Out, true, 0, 0, true) ;
     }
   }
 
@@ -65,21 +80,25 @@ class Tile {
 
 // The main state of the game
 export default class MainState extends State {
-  tiles : Tile[][] ;
-  allTileIndex : Phaser.Point[] ;
-  tankSprite: Phaser.Sprite ;
-  bulletSprite: Phaser.Sprite ;
-  bulletVelocity: Phaser.Point ;
-  tileGroup : Phaser.Group ;
-  cursors: Phaser.CursorKeys ;
+  private tiles : Tile[][] ;
+  private allTileIndex : Phaser.Point[] ;
+  private tankSprite: Phaser.Sprite ;
+  private bulletSprite: Phaser.Sprite ;
+  private bulletVelocity: Phaser.Point ;
+  private tileGroup : Phaser.Group ;
+  private tileEffectGroup: Phaser.Group ;
+  private cursors: Phaser.CursorKeys ;
+  private leftBoundry : number;
+  private rightBoundry : number;
+  private topBoundry : number;
+  private bottomBoundry : number;
 
-  leftBoundry : number;
-  rightBoundry : number;
-  topBoundry : number;
-  bottomBoundry : number;
-
-  TILE_WIDTH: number = 32 ;
-  VISIBLE_TILE_RADIUS: number = 15 ;    // test will be 5
+  private BULLET_DAMAGE = [10, 20, 25] ;
+  private TANK_THRUST = 400 ;
+  private TANK_ROTATE = 100 ;
+  private BULLET_VELOCITY = 400 ;
+  private TILE_WIDTH: number = 32 ;
+  private VISIBLE_TILE_RADIUS: number = 15 ;    // test will be 5
 
   create(): void {
     // Init
@@ -90,9 +109,10 @@ export default class MainState extends State {
 
     // Tile group
     this.tileGroup = new Phaser.Group(this.game) ;
+    this.tileEffectGroup = new Phaser.Group(this.game) ;
 
     // Tank
-    this.tankSprite = this.game.add.sprite(0, 0, 'tankImage');
+    this.tankSprite = this.game.add.sprite(0, 0, 'tankImage', 0);
     this.tankSprite.anchor.setTo(0.5, 0.5) ;
     this.game.physics.p2.enable(this.tankSprite);
     this.tankSprite.body.setCircle(15);
@@ -100,7 +120,7 @@ export default class MainState extends State {
     this.game.camera.follow(this.tankSprite, Phaser.Camera.FOLLOW_LOCKON, 0.1, 0.1);
 
     // Bullet
-    this.bulletSprite = this.game.add.sprite(0, 0, 'bulletImage');
+    this.bulletSprite = this.game.add.sprite(0, 0, 'bulletImage', 0);
     this.bulletSprite.anchor.setTo(0.5, 0.5) ;
     this.bulletSprite.visible = false ;
     this.bulletVelocity = new Phaser.Point(0, 0) ;
@@ -108,15 +128,26 @@ export default class MainState extends State {
     // Tile init
     this.tileAssign() ;
 
-    // Bullet
+    // Bullet fire
     this.game.input.keyboard.addKey(Phaser.KeyCode.ONE).onDown.add(() => {
       if (!this.bulletSprite.visible) {
         const lootAt = new Phaser.Point( Math.cos(Phaser.Math.degToRad(this.tankSprite.body.angle - 90)), Math.sin(Phaser.Math.degToRad(this.tankSprite.body.angle - 90))) ;
         this.bulletSprite.visible = true ;
+        this.bulletSprite.frame = this.tankSprite.frame ;
         this.bulletSprite.position.setTo(this.tankSprite.position.x + (lootAt.x * 18), this.tankSprite.position.y + (lootAt.y * 18)) ;
-        this.bulletVelocity.x = lootAt.x * 300 ;
-        this.bulletVelocity.y = lootAt.y * 300 ;
+        this.bulletVelocity.x = lootAt.x * this.BULLET_VELOCITY ;
+        this.bulletVelocity.y = lootAt.y * this.BULLET_VELOCITY ;
       }
+    });
+
+    // Tank color
+    this.game.input.keyboard.addKey(Phaser.KeyCode.TWO).onDown.add(() => {
+      let frameID = this.tankSprite.frame as number ;
+      frameID ++ ;
+      if (frameID > 2) {
+        frameID = 0 ;
+      }
+      this.tankSprite.frame = frameID ;
     });
 
     // Cursor
@@ -128,26 +159,26 @@ export default class MainState extends State {
     this.tankSprite.body.setZeroRotation();
     let move = false ;
     if (this.cursors.up.isDown) {
-      this.tankSprite.body.thrust(400) ;
+      this.tankSprite.body.thrust(this.TANK_THRUST) ;
       move = true ;
     } else if (this.cursors.down.isDown) {
-      this.tankSprite.body.thrust(-400) ;
+      this.tankSprite.body.thrust(-this.TANK_THRUST) ;
       move = true ;
     }
     if (this.cursors.left.isDown) {
-      this.tankSprite.body.rotateLeft(100);
+      this.tankSprite.body.rotateLeft(this.TANK_ROTATE);
       move = true ;
     } else if (this.cursors.right.isDown) {
-      this.tankSprite.body.rotateRight(100);
+      this.tankSprite.body.rotateRight(this.TANK_ROTATE);
       move = true ;
     }
 
-    // Bullet
+    // Bullet move & collision
     if (this.bulletSprite.visible) {
       this.bulletSprite.position.setTo(this.bulletSprite.position.x + (this.bulletVelocity.x * this.game.time.elapsed / 1000),
         this.bulletSprite.position.y + (this.bulletVelocity.y * this.game.time.elapsed / 1000)) ;
       let pos = this.bulletSprite.position ;
-
+      // Boundry check
       if (pos.x >= this.rightBoundry * this.TILE_WIDTH || pos.x <= this.leftBoundry * this.TILE_WIDTH ||
         pos.y >= this.bottomBoundry * this.TILE_WIDTH || pos.y <= this.topBoundry * this.TILE_WIDTH) {
         this.bulletSprite.visible = false ;
@@ -164,8 +195,9 @@ export default class MainState extends State {
             if (this.tiles[iX][iY].type !== TileType.Floor) {
               if (this.tiles[iX][iY].ckeckCollision(this.bulletSprite.position)) {
                 this.bulletSprite.visible = false ;
+                // Hit hey
                 if (this.tiles[iX][iY].type === TileType.Hay) {
-                  this.tiles[iX][iY].hitBullet(100) ;
+                  this.tiles[iX][iY].hitBullet(this.BULLET_DAMAGE[this.bulletSprite.frame]) ;
                 }
                 break ;
               }
@@ -205,7 +237,7 @@ export default class MainState extends State {
           } else if (randID === 10) {
             randID = 2 ;
           }
-          this.tiles[iX][iY] = new Tile(this.game, randID, tileSprite) ;
+          this.tiles[iX][iY] = new Tile(this.game, randID, tileSprite, this.tileEffectGroup) ;
           this.allTileIndex.push(new Phaser.Point(iX, iY)) ;
         } else {
           this.tiles[iX][iY].visible = true ;
