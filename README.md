@@ -70,3 +70,4 @@ Genesis坦克殺手
   * bulletFire(): 發射子彈
   * changeTankColor(): 改變坦克顏色
 
+End
