@@ -69,4 +69,6 @@ Genesis坦克殺手
   * initBts(): 初始化螢幕按鈕
   * bulletFire(): 發射子彈
   * changeTankColor(): 改變坦克顏色
+
+  文章結束
   
